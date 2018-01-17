@@ -38,8 +38,7 @@ class App extends React.Component {
   };
   handleKeyDown = event => {
     if (event.keyCode === 13) {
-      event.preventDefault();
-      this.handleSubmit();
+      this.handleSubmit(event);
     }
   };
 
