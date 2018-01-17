@@ -1,107 +1,125 @@
-import React, { Component } from "react";
-import "./App.css";
+import React from "react";
+import $ from "jquery";
+import {
+  Grid,
+  Row,
+  Col,
+  Form,
+  FormGroup,
+  FormControl,
+  ControlLabel,
+  Button,
+  ListGroup,
+  ListGroupItem
+} from "react-bootstrap";
 
+const WrappedListGroupItem = ({title, snippet}) => {
+  return (
+    <ListGroupItem>
+      <div className="well">
+        <a
+          href={`https://en.wikipedia.org/wiki/'${title}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <h3>{title}</h3>
+        </a>
+        <p dangerouslySetInnerHTML={{__html: snippet}}></p>
+      </div>
+    </ListGroupItem>
+  );
+};
 class App extends React.Component {
   state = {
-    api: "https://fcc-weather-api.glitch.me/api/current?",
-    lat: "",
-    lon: "",
-    currentTempUnit: "C",
-    currentTemp: "",
-    city: "",
-    country: "",
-    desc: ""
+    searchText: "",
+    api:
+      "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch=",
+    result: []
   };
-
-  componentDidMount = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(position => {
-        const lat = "lat=" + position.coords.latitude;
-        const lon = "lon=" + position.coords.longitude;
-        this.setState({
-          lat,
-          lon
-        });
-        this.getWeather();
-      });
-    } else {
-      console.log("Geolocation is not supported by this browser.");
+  handleKeyDown = event => {
+    if (event.keyCode === 13) {
+      event.preventDefault();
+      this.handleSubmit();
     }
   };
 
-  getWeather = () => {
-    const { api, lat, lon } = this.state;
-    const urlString = api + lat + "&" + lon;
-    fetch(urlString)
-      .then(response => response.json())
-      .then(data => {
-        const { name: city, sys: { country }, main: { temp }, weather } = data;
-
-        const desc = weather[0].main;
-
-        const currentTemp = `${Math.round(temp * 10) / 10}`;
+  handleSubmit = (event) => {
+    event.preventDefault()
+    const { api, searchText } = this.state;
+    const url = api + searchText;
+    $.ajax({
+      url,
+      dataType: "jsonp",
+      type: "POST",
+      headers: {
+        "Api-User-Agent": "Example/1.0"
+      },
+      success: data => {
+        const result = data.query.search;
+        console.log(result)
         this.setState({
-          city,
-          country,
-          currentTemp,
-          desc
+          result
         });
-      });
-  };
-
-  handleChangeTempUnit = () => {
-    const { currentTempUnit, currentTemp } = this.state;
-    const newTempUnit = currentTempUnit === "C" ? "F" : "C";
-    let newTemp;
-    if (newTempUnit === "F") {
-      newTemp = Math.round(parseInt(currentTemp) * 9 / 5 + 32);
-    } else {
-      newTemp = Math.round((parseInt(currentTemp) - 32) * 5 / 9);
-    }
-    this.setState({
-      currentTemp: newTemp,
-      currentTempUnit: newTempUnit
+      }
     });
   };
 
+  handleChange = event => {
+    this.setState({
+      searchText: event.target.value
+    });
+  };
   render() {
     return (
-      <div className="container">
-        <div className="row">
-          <header className="col-xs-12 text-center">
-            <h1>
-              Free C<i className="wi wi-hail" />de Camp{" "}
-            </h1>
-            <h1>Weather App</h1>
-          </header>
-          <div className="col-xs-8 col-xs-offset-2">
-            <div className="text-center">
-              <p>
-                {this.state.city}, {this.state.country}
-              </p>
-              <p>
-                {this.state.currentTemp} {String.fromCharCode(176)}{" "}
-                <span
-                  onClick={this.handleChangeTempUnit}
-                  className="pointer text-primary"
-                >
-                  {this.state.currentTempUnit}
-                </span>
-              </p>
-              <p>{this.state.desc}</p>
-            </div>
+      <Grid style={{ marginTop: 10 }}>
+        <Row>
+          <Col xs={12} md={7}>
+            <h1 className="text-center">Wikipedia Viewer</h1>
+            <a
+              href="https://en.wikipedia.org/wiki/Special:Random"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-center"
+            >
+              Random Article
+            </a>
+            <Form horizontal>
+              <FormGroup controlId="formHorizontalEmail">
+                <Col componentClass={ControlLabel} sm={2}>
+                  Search Box
+                </Col>
+                <Col sm={10}>
+                  <FormControl
+                    type="text"
+                    placeholder="Please enter your text"
+                    onChange={this.handleChange}
+                    onKeyDown={this.handleKeyDown}
+                    value={this.state.searchText}
+                  />
+                </Col>
+              </FormGroup>
 
-            <p className="text-center">
-              Inspired By{" "}
-              <a href="https://codepen.io/freeCodeCamp/" target="_blank">
-                FreeCodeCamp
-              </a>
-            </p>
-          </div>
-        </div>
-      </div>
+              <FormGroup>
+                <Col smOffset={2} sm={10}>
+                  <Button
+                    onClick={this.handleSubmit}
+                    bsStyle="primary"
+                    type="submit"
+                  >
+                    GO!
+                  </Button>
+                </Col>
+              </FormGroup>
+            </Form>
+          </Col>
+          <Col xs={12} md={7}>
+            <ListGroup>
+              {this.state.result && this.state.result.map(item => <WrappedListGroupItem title={item.title} snippet={item.snippet} key={item.pageid}/>)}
+            </ListGroup>
+          </Col>
+        </Row>
+      </Grid>
     );
   }
 }
-
 export default App;
