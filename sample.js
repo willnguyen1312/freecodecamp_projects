@@ -1,74 +1,71 @@
-var api = "https://fcc-weather-api.glitch.me/api/current?";
-var lat, lon;
-var tempUnit = "C";
-var currentTempInCelsius;
+var channels = ["freecodecamp", "ninja", "dizzykitten"];
+
+function getChannelInfo() {
+  channels.forEach(function(channel) {
+    function makeURL(type, name) {
+      return (
+        "https://wind-bow.gomix.me/twitch-api/" +
+        type +
+        "/" +
+        name +
+        "?callback=?"
+      );
+    }
+    $.getJSON(makeURL("streams", channel), function(data) {
+      var game, status;
+      if (data.stream === null) {
+        game = "Offline";
+        status = "offline";
+      } else if (data.stream === undefined) {
+        game = "Account Closed";
+        status = "offline";
+      } else {
+        game = data.stream.game;
+        status = "online";
+      }
+      $.getJSON(makeURL("channels", channel), function(data) {
+        var logo =
+            data.logo != null
+              ? data.logo
+              : "https://dummyimage.com/50x50/ecf0e7/5c5457.jpg&text=0x3F",
+          name = data.display_name != null ? data.display_name : channel,
+          description = status === "online" ? ": " + data.status : "";
+        html =
+          '<div class="row ' +
+          status +
+          '"><div class="col-xs-2 col-sm-1" id="icon"><img src="' +
+          logo +
+          '" class="logo"></div><div class="col-xs-10 col-sm-3" id="name"><a href="' +
+          data.url +
+          '" target="_blank">' +
+          name +
+          '</a></div><div class="col-xs-10 col-sm-8" id="streaming">' +
+          game +
+          '<span class="hidden-xs">' +
+          description +
+          "</span></div></div>";
+        status === "online"
+          ? $("#display").prepend(html)
+          : $("#display").append(html);
+      });
+    });
+  });
+}
 
 $(document).ready(function() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      var lat = "lat=" + position.coords.latitude;
-      var lon = "lon=" + position.coords.longitude;
-      getWeather(lat, lon);
-    });
-  } else {
-    console.log("Geolocation is not supported by this browser.");
-  }
-
-  $("#tempunit").click(function() {
-    var currentTempUnit = $("#tempunit").text();
-    var newTempUnit = currentTempUnit == "C" ? "F" : "C";
-    $("#tempunit").text(newTempUnit);
-    if (newTempUnit == "F") {
-      var fahTemp = Math.round(parseInt($("#temp").text()) * 9 / 5 + 32);
-      $("#temp").text(fahTemp + " " + String.fromCharCode(176));
+  getChannelInfo();
+  $(".selector").click(function() {
+    $(".selector").removeClass("active");
+    $(this).addClass("active");
+    var status = $(this).attr("id");
+    if (status === "all") {
+      $(".online, .offline").removeClass("hidden");
+    } else if (status === "online") {
+      $(".online").removeClass("hidden");
+      $(".offline").addClass("hidden");
     } else {
-      $("#temp").text(currentTempInCelsius + " " + String.fromCharCode(176));
+      $(".offline").removeClass("hidden");
+      $(".online").addClass("hidden");
     }
   });
 });
-
-function getWeather(lat, lon) {
-  var urlString = api + lat + "&" + lon;
-  $.ajax({
-    url: urlString,
-    success: function(result) {
-      $("#city").text(result.name + ", ");
-      $("#country").text(result.sys.country);
-      currentTempInCelsius = Math.round(result.main.temp * 10) / 10;
-      $("#temp").text(currentTempInCelsius + " " + String.fromCharCode(176));
-      $("#tempunit").text(tempUnit);
-      $("#desc").text(result.weather[0].main);
-      IconGen(result.weather[0].main);
-    }
-  });
-}
-
-function IconGen(desc) {
-  var desc = desc.toLowerCase();
-  switch (desc) {
-    case "drizzle":
-      addIcon(desc);
-      break;
-    case "clouds":
-      addIcon(desc);
-      break;
-    case "rain":
-      addIcon(desc);
-      break;
-    case "snow":
-      addIcon(desc);
-      break;
-    case "clear":
-      addIcon(desc);
-      break;
-    case "thunderstom":
-      addIcon(desc);
-      break;
-    default:
-      $("div.clouds").removeClass("hide");
-  }
-}
-
-function addIcon(desc) {
-  $("div." + desc).removeClass("hide");
-}

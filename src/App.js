@@ -1,120 +1,92 @@
 import React from "react";
 import $ from "jquery";
-import {
-  Grid,
-  Row,
-  Col,
-  Form,
-  FormGroup,
-  FormControl,
-  ControlLabel,
-  Button,
-  ListGroup,
-  ListGroupItem
-} from "react-bootstrap";
+import { Grid, Row, Col, Table } from "react-bootstrap";
+import "./App.css";
 
-const WrappedListGroupItem = ({title, snippet}) => {
-  return (
-    <ListGroupItem>
-      <div className="well">
-        <a
-          href={`https://en.wikipedia.org/wiki/'${title}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h3>{title}</h3>
-        </a>
-        <p dangerouslySetInnerHTML={{__html: snippet}}></p>
-      </div>
-    </ListGroupItem>
-  );
-};
+const TableRow = ({ status, logo, url, name, game, description }) => (
+  <tr>
+    <td className="text-center">
+      <img alt="Avatar" className="logo" src={logo} />
+    </td>
+    <td className="text-center pad-top-11">
+    <a href={url} target={"_blank"}>{name}</a>
+    </td>
+    <td className="text-center pad-top-11">
+      {game} {description}
+    </td>
+  </tr>
+);
+
+const makeUrl = (type, name) =>
+  `https://wind-bow.gomix.me/twitch-api/${type}/${name}?callback=?`;
 class App extends React.Component {
   state = {
-    searchText: "",
-    api:
-      "https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch=",
+    channels: ["freecodecamp", "ninja", "dizzykitten"],
     result: []
   };
-  handleKeyDown = event => {
-    if (event.keyCode === 13) {
-      this.handleSubmit(event);
-    }
-  };
 
-  handleSubmit = (event) => {
-    event.preventDefault()
-    const { api, searchText } = this.state;
-    const url = api + searchText;
-    $.ajax({
-      url,
-      dataType: "jsonp",
-      type: "POST",
-      headers: {
-        "Api-User-Agent": "Example/1.0"
-      },
-      success: data => {
-        const result = data.query.search;
-        console.log(result)
-        this.setState({
-          result
+  componentDidMount = () => {
+    const { channels } = this.state;
+    let result = [];
+    channels.forEach(channel => {
+      let _channel = {};
+      $.getJSON(makeUrl("streams", channel), data => {
+        let game, status;
+        if (data.stream === null) {
+          game = "Offline";
+          status = "offline";
+        } else if (data.stream === undefined) {
+          game = "Account Closed";
+          status = "offline";
+        } else {
+          game = data.stream.game;
+          status = "online";
+        }
+        $.getJSON(makeUrl("channels", channel), data => {
+          let logo =
+              data.logo != null
+                ? data.logo
+                : "https://dummyimage.com/50x50/ecf0e7/5c5457.jpg&text=0x3F",
+            name = data.display_name !== null ? data.display_name : channel,
+            description = status === "online" ? ": " + data.status : "",
+            url = data.url;
+          _channel = {
+            status,
+            logo,
+            url,
+            name,
+            game,
+            description
+          };
+          result.push(_channel);
+          this.setState({
+            result
+          });
         });
-      }
-    });
-  };
-
-  handleChange = event => {
-    this.setState({
-      searchText: event.target.value
+      });
     });
   };
   render() {
     return (
-      <Grid style={{ marginTop: 10 }}>
+      <Grid fluid style={{ marginTop: 10 }}>
         <Row>
-          <Col xs={12} md={7}>
-            <h1 className="text-center">Wikipedia Viewer</h1>
-            <a
-              href="https://en.wikipedia.org/wiki/Special:Random"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-center"
-            >
-              Random Article
-            </a>
-            <Form horizontal>
-              <FormGroup controlId="formHorizontalEmail">
-                <Col componentClass={ControlLabel} sm={2}>
-                  Search Box
-                </Col>
-                <Col sm={10}>
-                  <FormControl
-                    type="text"
-                    placeholder="Please enter your text"
-                    onChange={this.handleChange}
-                    onKeyDown={this.handleKeyDown}
-                    value={this.state.searchText}
-                  />
-                </Col>
-              </FormGroup>
+          <Col xs={12} smOffset={3} sm={6}>
+            <h1 className="text-center">Twitch Tivi Streamline</h1>
 
-              <FormGroup>
-                <Col smOffset={2} sm={10}>
-                  <Button
-                    onClick={this.handleSubmit}
-                    bsStyle="primary"
-                    type="submit"
-                  >
-                    GO!
-                  </Button>
-                </Col>
-              </FormGroup>
-            </Form>
-          </Col>
-          <Col xs={12} md={7}>
-            <ListGroup>
-              {this.state.result && this.state.result.map(item => <WrappedListGroupItem title={item.title} snippet={item.snippet} key={item.pageid}/>)}
-            </ListGroup>
+            <Table responsive>
+              <thead>
+                <tr>
+                  <th className="text-center">Avatar</th>
+                  <th className="text-center">Name</th>
+                  <th className="text-center">Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {this.state.result.map((channel, index) => (
+                  <TableRow {...channel} key={index} />
+                ))}
+              </tbody>
+            </Table>
           </Col>
         </Row>
       </Grid>
